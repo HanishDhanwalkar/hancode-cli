@@ -7,7 +7,9 @@ from src.tools import (
     add_numbers,
     substract_numbers,
     multiply_numbers,
-    divide_numbers
+    divide_numbers,
+    
+    web_search_ddg
 )
 
 AVAILABLE_TOOLS = {
@@ -18,5 +20,7 @@ AVAILABLE_TOOLS = {
     "add_numbers": add_numbers,
     "substract_numbers": substract_numbers,
     "multiply_numbers": multiply_numbers,
-    "divide_numbers": divide_numbers
+    "divide_numbers": divide_numbers,
+    
+    "web_search_ddg": web_search_ddg
 }

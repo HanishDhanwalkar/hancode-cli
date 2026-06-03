@@ -1,5 +1,6 @@
 
-
+import json
+import requests
 import asyncio
 from typing import Any
 
@@ -63,5 +64,55 @@ async def divide_numbers(a: Any, b: Any) -> float:
         a = float(a)
     if not isinstance(b, float):
         b = float(b)
+        if b == 0:
+            return ZeroDivisionError
     print(f"[Tool Execution] Dividing {a} and {b}...")
     return a / b
+
+async def web_search_ddg(query:str, max_results: int=3):
+    from ddgs import DDGS
+    with DDGS() as ddgs:
+        results = ddgs.text(query=query, max_results=max_results)
+        
+        tool_result = []
+        for result in results:
+            tool_result.append(
+                {
+                    "title": result["title"],
+                    "body": result["body"],
+                }
+            )
+            
+        return list(results)
+
+
+
+async def get_webpage_content(url: str):
+    # TODO: 1. Compress the web content
+    # 2. Truncate / Rerank -> Keeps only the top ~500 tokens relevant to the query
+    
+    # # Method #1
+    # from ddgs import DDGS
+
+    # page = DDGS().extract(url)
+    # return page["content"]
+
+    # Method #2
+    response = requests.get(f"https://r.jina.ai/{url}")
+    return response.text  # Returns clean, highly compressed markdown
+
+    
+
+if __name__ == "__main__":
+    
+    results = []
+    async def test_web_search_ddgs():
+        # query = "Today's date?"
+        query = "Who ?"
+        
+        m_res = 2
+        results = await web_search_ddg(query, m_res)
+        print(results)
+        # await get_webpage_content(results[0]['href'])
+        
+    asyncio.run(test_web_search_ddgs())

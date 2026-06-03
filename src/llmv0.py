@@ -10,10 +10,6 @@ from src.tools_registry import AVAILABLE_TOOLS
 from src.context_manager import ContextAwareClient, MessageCompressor
 
 
-# ==========================================
-# 1. MOCK STRUCTURES
-# ==========================================
-
 class MockToolCall:
     """Mock class matching Ollama's native response tool structure."""
 
@@ -81,6 +77,7 @@ def get_tools_with_signatures() -> str:
     """Returns a string description of tools and their exact parameters."""
     descriptions = []
     for name, func in AVAILABLE_TOOLS.items():
+        # Get the exact argument names of the Python function
         sig = inspect.signature(func)
         params = list(sig.parameters.keys())
         descriptions.append(f"- {name}({', '.join(params)})")
@@ -100,8 +97,6 @@ def validate_plan(plan: list[dict]) -> bool:
     # Tool specific guidelines/ restrictions
     for step in plan:
         if step.get("tool") == "web_search_ddg":
-            if "args" not in step:
-                step["args"] = {}
             step["args"]["max_results"] = min(
                 int(step["args"].get("max_results", 3)), 3)
 
@@ -119,16 +114,14 @@ def validate_plan(plan: list[dict]) -> bool:
     return True
 
 
-# ==========================================
-# 4. PLANNING PHASE
-# ==========================================
-
 async def plan_execution(client: AsyncClient, user_prompt: str) -> list[dict]:
     """
     Calls the LLM in planner mode to produce a structured JSON execution plan.
     Returns a list of step dicts, or an empty list on failure.
     """
-    print("[PLANNER] 🧠 Generating draft execution plan...\n")
+    print("[PLANNER] 🧠 Generating execution plan...\n")
+
+    available_tools_str = ", ".join(VALID_TOOLS)
 
     planner_messages = [
         {"role": "system", "content": config.PLANNER_SYSTEM_PROMPT.format(
@@ -143,90 +136,26 @@ async def plan_execution(client: AsyncClient, user_prompt: str) -> list[dict]:
     )
 
     raw = response.message.content or ""
+
+    # Hex-escaping backticks (\x60) prevents markdown compiler collapse
     raw = re.sub(r"\x60{3}(?:json)?", "", raw).strip().rstrip("\x60").strip()
 
-    plan = json.loads(raw)
-    if plan and validate_plan(plan):
-        print(f"[PLANNER] 📝 Draft Plan with {len(plan)} step(s) created:")
-        for step in plan:
-            print(f"   Step {step.get('step')}: {step.get('description')} "
-                  f"→ {step.get('tool')}({step.get('args')})")
-        print()
-        return plan
-
-    print(f"[PLANNER] ⚠️  Could not parse draft plan. Raw output:\n{plan}\n")
-    return []
-
-
-# ==========================================
-# 4.5 PLAN REVIEW & ENHANCEMENT PHASE (Robust)
-# ==========================================
-async def review_and_enhance_plan(client: AsyncClient, user_prompt: str, draft_plan: list[dict]) -> list[dict]:
-    """
-    An independent reviewer turn (no conversation context shared) that audits, corrects,
-    and refines the generated draft execution plan for mathematical and logical consistency.
-    """
-    print("[REVIEWER] 🔍 Initiating isolated plan auditing loop...\n")
-
-    # Define the Reviewer's System Guidelines
-    reviewer_system_prompt = (
-        "You are an expert Planning Auditor and Optimizer. Your task is to review a draft step-by-step execution plan "
-        "designed to satisfy a user request. You must ensure the plan is logical, sequentially correct, avoids redundancies, "
-        "and maps parameter dependencies correctly using step placeholder tags (e.g. <result_of_step_N>).\n\n"
-        "Strict Review Constraints:\n"
-        "- The only allowed tools and their exact callable signatures are:\n"
-        "{available_tools}\n"
-        "- Check for and ELIMINATE redundant filler steps (e.g., adding 0, multiplying/dividing by 1, or creating intermediate placeholder steps that perform no useful work).\n"
-        "- Double-check the user's mathematical intent against the tool selection! If they ask to 'multiply' or 'product', ensure you use 'multiply_numbers' and NOT 'add_numbers'. If they ask to 'add' or 'sum', use 'add_numbers'.\n"
-        "- Verify that placeholder tokens correctly point to a prior step's outputs.\n"
-        "- Ensure math operations follow standard precedence rules.\n"
-        "- Minimize the total number of steps. If a plan can be resolved in 3 clean steps instead of 5 bloated steps, modify and consolidate it.\n"
-        "- Output ONLY the final validated valid JSON array of steps. Absolutely no conversational filler, markdown code fences, or headers."
-    )
-
-    review_user_message = (
-        f"Original User Request: '{user_prompt}'\n\n"
-        f"Draft Plan to audit:\n{json.dumps(draft_plan, indent=2)}\n\n"
-        f"Analyze the draft plan, apply any corrections or enhancements, and output the audited plan JSON:"
-    )
-
-    reviewer_messages = [
-        {"role": "system", "content": reviewer_system_prompt.format(
-            available_tools=get_tools_with_signatures())},
-        {"role": "user", "content": review_user_message}
-    ]
-
     try:
-        # Execute turning call (using clean, independent client execution)
-        response = await client.chat(
-            model=config.MODEL_NAME,
-            messages=reviewer_messages,
-            options={**config.LLM_OPTIONS, "temperature": 0.0}
-        )
-
-        raw = response.message.content or ""
-
-        # Use our robust array parser to extract JSON list regardless of surrounding conversational preamble
-        raw = re.sub(r"\x60{3}(?:json)?", "", raw).strip().rstrip("\x60").strip()
-
         plan = json.loads(raw)
-
-        if plan and validate_plan(plan):
-            print(
-                f"[REVIEWER] ✅ Plan audit complete! Enhanced plan contains {len(plan)} step(s):")
+        if isinstance(plan, list) and plan and validate_plan(plan):
+            print(f"[PLANNER] ✅ Plan with {len(plan)} step(s) received:")
             for step in plan:
                 print(f"   Step {step.get('step')}: {step.get('description')} "
                       f"→ {step.get('tool')}({step.get('args')})")
             print()
             return plan
-        else:
-            print(
-                "[REVIEWER] ⚠️ Reviewed plan parsed but failed structural validation. Falling back to draft plan.")
-    except Exception as e:
-        print(
-            f"[REVIEWER] ❌ Review phase failed due to parse error: {str(e)}. Falling back to draft plan.")
+        elif isinstance(plan, list):
+            print("[PLANNER] ⚠️  Plan parsed but failed validation.")
+    except json.JSONDecodeError:
+        pass
 
-    return draft_plan
+    print(f"[PLANNER] ⚠️  Could not parse plan. Raw output:\n{raw}\n")
+    return []
 
 
 # ==========================================
@@ -287,8 +216,9 @@ async def execute_plan(async_client: AsyncClient, plan: list[dict], user_prompt:
             print(f"[EXECUTOR] 🔍 Extracting numeric values from raw web results...")
             extraction_prompt = (
                 f"You were asked: {description}. Here are raw search results (JSON): {raw_result}. "
-                f"Extract the single liner answer or if possible numerical integer or float that best answers the query. "
-                f"Reply in very short answer in plain text. Do NOT add any extra markdown, code formatting, or text."
+                f"Extract the single numerical integer or float that best answers the query. "
+                f"Reply ONLY with a valid JSON object: {{\"count\": N}} where N is an integer, float, "
+                f"or null if completely unknown or not found. Do NOT add any extra markdown, code formatting, or text."
             )
 
             async def attempt_extraction(prompt_str: str) -> tuple[bool, any]:
@@ -298,20 +228,32 @@ async def execute_plan(async_client: AsyncClient, plan: list[dict], user_prompt:
                     options={**config.LLM_OPTIONS, "temperature": 0.0}
                 )
                 text_out = (extract_resp.message.content or "").strip()
-
-                return True, text_out
+                text_out = re.sub(r"\x60{3}(?:json)?", "", text_out).strip().rstrip(
+                    "\x60").strip()
+                try:
+                    parsed = json.loads(text_out)
+                    if isinstance(parsed, dict) and "count" in parsed:
+                        return True, parsed["count"]
+                except json.JSONDecodeError:
+                    pass
+                return False, None
 
             success, extracted_val = await attempt_extraction(extraction_prompt)
 
             if not success:
                 print(
-                    f"[EXECUTOR] ⚠️ Extraction failed. Retrying with a stricter constraint format..."
+                    f"[EXECUTOR] ⚠️ Extraction failed. Retrying with a stricter constraint format...")
+                strict_retry_prompt = (
+                    f"CRITICAL ERROR: Your previous response was not valid raw JSON. "
+                    f"Read this query: '{description}'. Given data: {raw_result}. "
+                    f"You must output precisely valid JSON text containing exactly one key: {{\"count\": N}}. "
+                    f"Do not write prose."
                 )
+                success, extracted_val = await attempt_extraction(strict_retry_prompt)
 
             if success and extracted_val is not None:
                 print(
-                    f"           🎯 Extracted chosen numeric outcome: {extracted_val}"
-                )
+                    f"           🎯 Extracted chosen numeric outcome: {extracted_val}")
                 raw_result = str(extracted_val)
                 # Register context telemetry trail
                 client.add_message("tool", tool_resp["content"])
@@ -319,8 +261,7 @@ async def execute_plan(async_client: AsyncClient, plan: list[dict], user_prompt:
                     "assistant", f"search_results -> chosen_count: {extracted_val}")
             else:
                 print(
-                    f"[EXECUTOR] ❌ Extraction fallback aborted or returned null. Ending execution loop."
-                    )
+                    f"[EXECUTOR] ❌ Extraction fallback aborted or returned null. Ending execution loop.")
                 return
 
         # Show context usage
@@ -454,23 +395,19 @@ async def run_conversation(user_prompt: str):
 
     print(f"\n[---] Starting Agent for prompt: '{user_prompt}'\n")
 
-    # --- PHASE 1: DRAFT PLAN ---
-    draft_plan = await plan_execution(client, user_prompt)
-
-    # --- PHASE 2: REVIEW & ENHANCE (NEW) ---
-    plan = []
-    if draft_plan:
-        plan = await review_and_enhance_plan(client, user_prompt, draft_plan)
+    # --- PHASE: PLAN ---
+    plan = await plan_execution(client, user_prompt)
 
     # --- PHASE 3: EXECUTE ---
     if plan:
         await execute_plan(client, plan, user_prompt)
     else:
-        print(
-            "[---] Planning/Auditing failed completely. Falling back to unguided agentic loop.\n")
+        print("[---] Planning failed. Falling back to unguided agentic loop.\n")
         await run_unguided_loop(client, user_prompt)
 
 
 if __name__ == "__main__":
+    # prompt = "solve (54252452 / 75464 + 73563) * 9865"
     prompt = "Calculate number of times RCB won in IPL and multiply that number with number of times MI won"
+
     asyncio.run(run_conversation(prompt))
