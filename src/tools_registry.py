@@ -1,5 +1,6 @@
 
-from src.tools import (
+from tools import ( # for .ipynb
+# from src.tools import (
     get_stock_price,
     analyze_portfolio_risk,
     get_user_risk_profile,

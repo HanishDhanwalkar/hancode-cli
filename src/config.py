@@ -1,6 +1,6 @@
 # src/config.py
 
-MODEL_NAME = "llama3.2"
+MODEL_NAME = "qwen3:8b"
 
 LLM_OPTIONS = {
     "temperature": 0.0,       # Crucial for mathematical determinism

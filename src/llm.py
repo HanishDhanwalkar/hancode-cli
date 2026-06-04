@@ -5,9 +5,14 @@ import inspect
 
 from ollama import AsyncClient
 
-import src.config as config
-from src.tools_registry import AVAILABLE_TOOLS
-from src.context_manager import ContextAwareClient, MessageCompressor
+# import src.config as config
+# from src.tools_registry import AVAILABLE_TOOLS
+# from src.context_manager import ContextAwareClient, MessageCompressor
+
+# For .ipynb
+import config as config
+from tools_registry import AVAILABLE_TOOLS
+from context_manager import ContextAwareClient, MessageCompressor
 
 
 # ==========================================
@@ -144,7 +149,10 @@ async def plan_execution(client: AsyncClient, user_prompt: str) -> list[dict]:
 
     raw = response.message.content or ""
     raw = re.sub(r"\x60{3}(?:json)?", "", raw).strip().rstrip("\x60").strip()
-
+    
+    if raw.startswith("<think>"):
+        raw = raw.split("</think>")[1].strip()
+    
     plan = json.loads(raw)
     if plan and validate_plan(plan):
         print(f"[PLANNER] 📝 Draft Plan with {len(plan)} step(s) created:")

@@ -26,6 +26,9 @@ logger = logging.getLogger(__name__)
 # "User Soul": "The user is Hanish, software engineer", # TODO: load from SOUL.md
 # "Coding Standards": "Best Python practices", # TODO: load from AGENTS.md
 
+MODEL = "qwen3:8b"
+# MODEL = "llama3.2"
+
 # Unified Shared Memory (Graph State)
 class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], operator.add]
@@ -66,7 +69,7 @@ class Agent:
 
         # Internal LLM instance bound with the agent's unique toolset
         self.llm = ChatOllama(
-            model="llama3.2",
+            model=MODEL,
             temperature=0
         ).bind_tools(self.tools)
         
