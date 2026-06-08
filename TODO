@@ -1,0 +1,1 @@
+# TODO: AVAILABLE_MODELS in .env - append ollama models using ollama.list_models() and filter by some criteria (e.g. only 8b models, or models with "deepseek" in the name, etc.)
