@@ -12,7 +12,8 @@ from typing import Any
 # =======================
 # Default values
 # =======================
-DEFAULT_MODEL = os.environ.get("ANTHROPIC_MODEL_ID", "claude-sonnet-4-6")
+
+# =======================
 
 def get_project_root() -> Path:
     return Path(__file__).parent.parent

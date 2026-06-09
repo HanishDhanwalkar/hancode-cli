@@ -13,7 +13,13 @@ __all__ = [
     "ModelProvider",
     "ProviderMessage",
     "ToolDefinition",
-    ""
+    "list_available_models",
+    # "AWSBedrockProvider",
+    "AnthropicFoundryProvider",
+    # "OpenAIProvider",
+    # "AzureOpenAIProvider",
+    # "GeminiProvider",
+    "OllamaProvider",
     # TODO: add providers to __all__
 ]
 
