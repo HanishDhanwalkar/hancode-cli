@@ -1,9 +1,9 @@
-"""AWS Bedrock Provider"""
+"""Google Gemini Provider"""
 
 from __future__ import annotations
 
 import os
-from typing import Any, Callable
+from typing import Any, Callable 
 
 from dotenv import load_dotenv
 
@@ -19,7 +19,7 @@ load_dotenv()
 
 DEFAULT_MODEL = ""
 
-class AWSBedrockProvider(ModelProvider):
+class GeminiProvider(ModelProvider):
     def __init__(self, model: str = DEFAULT_MODEL) -> None:
         self._model = model
         self._client = None  # lazy load to avoid importing anthropic package unnecessarily

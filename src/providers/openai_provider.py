@@ -1,4 +1,4 @@
-"""AWS Bedrock Provider"""
+"""Openai Provider"""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ load_dotenv()
 
 DEFAULT_MODEL = ""
 
-class AWSBedrockProvider(ModelProvider):
+class OpenAIProvider(ModelProvider):
     def __init__(self, model: str = DEFAULT_MODEL) -> None:
         self._model = model
         self._client = None  # lazy load to avoid importing anthropic package unnecessarily
