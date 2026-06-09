@@ -2,9 +2,9 @@ import os
 
 from src.providers.base import ModelProvider, ProviderMessage, ToolDefinition
 from src.providers.anthropic_foundry import AnthropicFoundryProvider
-from src.providers.openai import OpenAIProvider
+from src.providers.openai_provider import OpenAIProvider
 from src.providers.azure_openai import AzureOpenAIProvider
-from src.providers.gemini import GeminiProvider
+from src.providers.gemini_provider import GeminiProvider
 from src.providers.ollama_provider import OllamaProvider
 from src.providers.aws_bedrock import AWSBedrockProvider
 
@@ -14,11 +14,11 @@ __all__ = [
     "ProviderMessage",
     "ToolDefinition",
     "list_available_models",
-    # "AWSBedrockProvider",
+    "AWSBedrockProvider",
     "AnthropicFoundryProvider",
-    # "OpenAIProvider",
-    # "AzureOpenAIProvider",
-    # "GeminiProvider",
+    "OpenAIProvider",
+    "AzureOpenAIProvider",
+    "GeminiProvider",
     "OllamaProvider",
     # TODO: add providers to __all__
 ]
