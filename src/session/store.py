@@ -76,11 +76,17 @@ class SessionStore:
             "user_goal": session.user_goal,
             "events": [_event_to_dict(event) for event in session.events],
             "plans": [asdict(plan) for plan in session.plans],
-            "patchs": [asdict(patch) for patch in session.patchs],
+            "patches": [asdict(patch) for patch in session.patches],
             "model": session.model,
             "started_at": session.started_at
         }
-        session_path.write_text(session.json())
+        session_path.write_text(
+            json.dumps(
+                data,
+                indent=2
+            ),
+            encoding="utf-8"
+        )
     
     def load(self, session_id:str) -> Session | None:
         path = self.session_dir / f"{session_id}.json"
@@ -98,7 +104,7 @@ class SessionStore:
             user_goal=data.get("user_goal", ""),
             events=events,
             plans=[Plan(**p) for p in data.get("plans",[])],
-            patchs=[Patch(*p) for p in data.get("patchs",[])],
+            patches=[Patch(*p) for p in data.get("patches",[])],
             model=data.get("model", ""),
             started_at=data.get("started_at", "")
         )

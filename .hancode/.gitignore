@@ -1,0 +1,5 @@
+checkpoints/
+sessions/
+trust
+config.json
+audit.*

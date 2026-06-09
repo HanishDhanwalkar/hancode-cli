@@ -7,7 +7,25 @@ from enum import Enum
 from typing import Any
 
 
+class TrustLevel(str, Enum):
+    UNTRUSTED = "untrusted"
+    READ_ONLY = "trusted_read_only"
+    EDITABLE = "trusted_editable"
+    AUTOMATED = "trusted_automated"
+
+
 @dataclass
+class Workspace:
+    workspace_id: str
+    root_path: str
+    trust_level: TrustLevel = TrustLevel.UNTRUSTED
+    is_git_repo: bool = False
+    git_branch: str = ""
+    created_at: str = field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
+
+
 class EventType(str, Enum):
     USER = "user"
     ASSISTANT = "assistant"
@@ -17,14 +35,15 @@ class EventType(str, Enum):
     STATUS = "status"
     INTERNAL = "internal"
 
-@dataclass
+
 class Mode(str, Enum):
     CHAT = "chat"
     PLAN = "plan"
     EDIT = "edit"
     REVIEW = "review"
     DEBUG = "debug"
-    
+
+
 @dataclass
 class Plan:
     plan_id: str
@@ -35,7 +54,8 @@ class Plan:
     created_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
-    
+
+
 class Patch:
     patch_id: str
     files_changed: list[str]
@@ -46,9 +66,10 @@ class Patch:
     appplied: bool = False
     plan_id: str
 
+
 @dataclass
 class SessionEvent:
-    
+
     """Single entry in the session timeline; distinct from provider API roles"""
 
     event_type: str
@@ -66,14 +87,12 @@ class SessionEvent:
 class Session:
     session_id: str
     workspace_id: str
-    mode: str
-    user_goal: str
+    mode: Mode = Mode.CHAT
+    user_goal: str = ""
     events: list[SessionEvent] = field(default_factory=list)
-    # TODO: change plan type from str -> Plan
-    plans: list[str] = field(default_factory=list)
-    # TODO: change plan type from str -> PAtch
-    patches: list[str] = field(default_factory=list)
-    model: str
+    plans: list[Plan] = field(default_factory=list)
+    patches: list[Patch] = field(default_factory=list)
+    model: str = field(default_factory=str)
     started_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
